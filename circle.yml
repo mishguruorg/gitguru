@@ -1,0 +1,42 @@
+
+version: 2
+jobs:
+  do_everything:
+    docker:
+      - image: circleci/python:2.7-node
+    steps:
+      - setup_remote_docker
+      - checkout
+      - run:
+          name: "Set Up Env Vars"
+          command: |
+            echo $NPMRC > ~/.npmrc
+            mkdir ~/npm
+            echo prefix = ~/npm >> ~/.npmrc
+            echo 'export PATH=$PATH:~/npm/bin/' >> $BASH_ENV
+            echo 'export DOCKER_BASE="mishguru/fanoutbase:latest"' >> $BASH_ENV
+      - run:
+          name: "Install the @mishguru/service package"
+          command: npm install -g @mishguru/service
+      - run:
+          name: "Install dependencies"
+          command: |
+            echo 'export PATH=$PATH:~/.local/bin/' >> $BASH_ENV
+            service-install-dependencies
+      - run:
+          name: Test
+          command: |
+            service-run-tests
+      - run:
+          name: Deploy
+          command: "if [[ \"$CIRCLE_BRANCH\" == \"master\" ]]; then service-push-docker-tag; fi"
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - do_everything:
+          context: shared
+          filters:
+            tags:
+                only: /.*/
