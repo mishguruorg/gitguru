@@ -34,3 +34,16 @@
   <dt><code>SCHEDULE</code></dt>
   <dd>A cron job format, used to run at regular intervals. e.g. <code>0 7 * * 1-5</code></dt>
 </dl>
+
+## Run with Docker
+
+```bash
+docker run -it --rm --name gitguru \
+  -e "SLACK_CHANNEL=dev-todo" \
+  -e "SLACK_WEBHOOK=https://hooks.slack.com/services/XXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+  -e "GITHUB_ORG=mishguruorg" \
+  -e "GITHUB_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+  -e "CLUBHOUSE_ACCOUNT=mishguru" \
+  -e "SCHEDULE=0 7 * * 1-5" \
+  mishguru/gitguru:latest
+```
