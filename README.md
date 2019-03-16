@@ -2,9 +2,21 @@
 
 > A bot that checks Pull Requests and posts them to slack.
 
+![](./screenshot.png)
+
 ## Features
 
-- Displays Clubhouse links
+- Can be scheduled to run at a regular interval
+- One slack post per Pull Request
+- Posts are concise but contain useful information
+  - Author
+  - Title
+  - Link to Pull Request
+  - First sentence of description
+  - Number of comments
+  - Number of files changed
+  - Time of last update
+  - Link to clubhouse card
 
 ## Environment Variables
 
