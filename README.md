@@ -8,6 +8,7 @@
 
 - Can be scheduled to run at a regular interval
 - One slack post per Pull Request
+- Ignores PRs in draft mode
 - Posts are concise but contain useful information
   - Author
   - Title
@@ -32,7 +33,7 @@
   <dt><code>CLUBHOUSE_ACCOUNT</code></dt>
   <dd>Your clubhouse account e.g. <code>mishguru</code></dd>
   <dt><code>SCHEDULE</code></dt>
-  <dd>A cron job format, used to run at regular intervals. e.g. <code>0 7 * * 1-5</code></dt>
+  <dd>(optional) A cron job format, used to run at regular intervals. e.g. <code>0 7 * * 1-5</code></dt>
 </dl>
 
 ## Run with Docker

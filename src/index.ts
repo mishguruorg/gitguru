@@ -50,10 +50,11 @@ const getApprovedReview = async (pullRequest : PullRequest) => {
 }
 
 const parsePullRequestExtras = (data : any) : PullRequestExtras => {
-  const { changed_files, head } = data
+  const { changed_files, head, mergeable_state } = data
   return {
     filesChanged: changed_files,
-    branch: head.ref
+    branch: head.ref,
+    isDraft: (mergeable_state === 'draft')
   }
 }
 
@@ -82,6 +83,7 @@ type PullRequest = {
 type PullRequestExtras = {
   filesChanged : number
   branch : string
+  isDraft: boolean
 }
 
 type ExtendedPullRequest = PullRequest & PullRequestExtras
@@ -282,14 +284,20 @@ const start = async () => {
   for (const pr of pullRequests) {
     const author = await getUser(pr.author)
     const pullRequest = await getExtendedPullRequest(pr)
-    await postPullRequestToSlack({ pullRequest, author })
+    if (pullRequest.isDraft === false) {
+      await postPullRequestToSlack({ pullRequest, author })
+    }
   }
 }
 
-const job = scheduleJob(SCHEDULE, async () => {
-  console.log('Running...')
-  await start()
-  console.log(`Next run at: ${job.nextInvocation().toLocaleString()}`)
-})
+if (SCHEDULE) {
+  const job = scheduleJob(SCHEDULE, async () => {
+    console.log('Running...')
+    await start()
+    console.log(`Next run at: ${job.nextInvocation().toLocaleString()}`)
+  })
 
-console.log(`Next run at: ${job.nextInvocation().toLocaleString()}`)
+  console.log(`Next run at: ${job.nextInvocation().toLocaleString()}`)
+} else {
+  start().catch(console.error)
+}
