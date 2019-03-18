@@ -29,7 +29,7 @@ jobs:
             service-run-tests
       - run:
           name: Deploy
-          command: "if [[ \"$CIRCLE_BRANCH\" == \"master\" ]]; then service-push-docker-tag; fi"
+          command: "if [[ \"$CIRCLE_BRANCH\" == \"master\" ]]; then service-push-docker-tag; service-deploy-to-rancher; fi"
 
 workflows:
   version: 2
