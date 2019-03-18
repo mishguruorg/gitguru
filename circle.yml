@@ -17,6 +17,7 @@ jobs:
             echo 'export DOCKER_BASE="mishguru/fanoutbase:latest"' >> $BASH_ENV
             echo 'export INTERNAL_BRANCH="internal"' >> $BASH_ENV
             echo 'export PRODUCTION_BRANCH="master"' >> $BASH_ENV
+            echo 'export RANCHER_PRODUCTION_NAMESPACE="aux"' >> $BASH_ENV
       - run:
           name: "Install the @mishguru/service package"
           command: npm install -g @mishguru/service
