@@ -153,7 +153,7 @@ const parseUser = (data : any) : User => {
   const { html_url, avatar_url, login, name } = data
   return {
     username: login,
-    name,
+    name: name || login,
     avatar: avatar_url,
     url: html_url
   }
