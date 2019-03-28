@@ -1,9 +1,11 @@
-
 version: 2
 jobs:
   do_everything:
     docker:
-      - image: circleci/python:2.7-node
+      - image: mishguru/circleci:latest
+        auth:
+          username: $DOCKER_USER
+          password: $DOCKER_PASSWORD
     steps:
       - setup_remote_docker
       - checkout
@@ -18,11 +20,15 @@ jobs:
             echo 'export RANCHER_INTERNAL_NAMESPACE="aux"' >> $BASH_ENV
       - run:
           name: "Install the @mishguru/service package"
-          command: npm install -g @mishguru/service
+          command: |
+            npm install -g @mishguru/service@4
+      - run:
+          name: "Start the mysql database"
+          command: |
+            service-start-database
       - run:
           name: "Install dependencies"
           command: |
-            echo 'export PATH=$PATH:~/.local/bin/' >> $BASH_ENV
             service-install-dependencies
       - run:
           name: Test
@@ -30,7 +36,9 @@ jobs:
             service-run-tests
       - run:
           name: Deploy
-          command: "if [[ \"$CIRCLE_BRANCH\" == \"master\" ]]; then service-push-docker-tag; service-deploy-to-rancher; fi"
+          command: |
+            service-push-docker-tag
+            service-deploy-to-rancher
 
 workflows:
   version: 2
@@ -40,4 +48,4 @@ workflows:
           context: shared
           filters:
             tags:
-                only: /.*/
+              only: /.*/
