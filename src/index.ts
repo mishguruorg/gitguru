@@ -8,7 +8,14 @@ import { scheduleJob } from 'node-schedule'
 
 dotenv.config()
 
-const { GITHUB_TOKEN, GITHUB_ORG, SLACK_CHANNEL, CLUBHOUSE_ACCOUNT, SLACK_WEBHOOK, SCHEDULE } = process.env
+const {
+  GITHUB_TOKEN,
+  GITHUB_ORG,
+  SLACK_CHANNEL,
+  CLUBHOUSE_ACCOUNT,
+  SLACK_WEBHOOK,
+  SCHEDULE,
+} = process.env
 
 const CLUBHOUSE_URL = `https://app.clubhouse.io/${CLUBHOUSE_ACCOUNT}/story/`
 
@@ -20,25 +27,25 @@ const COLOR_APPROVED = 'good'
 const PR_DEADLINE = DateTime.local().minus({ days: 2 })
 
 const github = new Octokit({
-  auth: `token ${GITHUB_TOKEN}`
+  auth: `token ${GITHUB_TOKEN}`,
 })
 
-type Review = {
-  approvedBy : string
+interface Review {
+  approvedBy: string,
 }
 
-const parseReview = (data : any) : Review => {
+const parseReview = (data: any): Review => {
   const { user } = data
   return {
     approvedBy: user.login,
   }
 }
 
-const getApprovedReview = async (pullRequest : PullRequest) => {
+const getApprovedReview = async (pullRequest: PullRequest) => {
   const res = await github.pulls.listReviews({
     owner: GITHUB_ORG,
     repo: pullRequest.repo,
-    number: pullRequest.id
+    number: pullRequest.id,
   })
 
   const review = res.data.find((review) => review.state === 'APPROVED')
@@ -49,117 +56,131 @@ const getApprovedReview = async (pullRequest : PullRequest) => {
   return parseReview(review)
 }
 
-const parsePullRequestExtras = (data : any) : PullRequestExtras => {
-  const { changed_files, head, mergeable_state } = data
-  return {
-    filesChanged: changed_files,
-    branch: head.ref,
-    isDraft: (mergeable_state === 'draft')
-  }
+interface PullRequest {
+  id: number,
+  url: string,
+  repo: string,
+  title: string,
+  author: string,
+  commentCount: number,
+  createdAt: DateTime,
+  updatedAt: DateTime,
+  body: string,
+  summary: string,
 }
 
-const getExtendedPullRequest = async (pullRequest : PullRequest) : Promise<ExtendedPullRequest> => {
-  const { repo, id } = pullRequest
-  const res = await github.pulls.get({ owner: GITHUB_ORG, repo, number: id })
-  return {
-    ...parsePullRequest(res.data),
-    ...parsePullRequestExtras(res.data)
-  }
-}
-
-type PullRequest = {
-  id : number
-  url : string
-  repo : string
-  title : string
-  author : string
-  commentCount : number
-  createdAt : DateTime
-  updatedAt : DateTime
-  body : string
-  summary : string
-}
-
-type PullRequestExtras = {
-  filesChanged : number
-  branch : string
-  isDraft: boolean
+interface PullRequestExtras {
+  filesChanged: number,
+  branch: string,
+  isDraft: boolean,
 }
 
 type ExtendedPullRequest = PullRequest & PullRequestExtras
 
-const parsePullRequest = (data : any) : PullRequest => {
-  const { number, html_url, title, user, comments, created_at, updated_at, body } = data
+const parsePullRequest = (data: any): PullRequest => {
+  const {
+    number,
+    html_url: url,
+    title,
+    user,
+    comments,
+    created_at: createdAt,
+    updated_at: updatedAt,
+    body: rawBody,
+  } = data
 
-  const repo = html_url.split('/')[4]
+  const body = rawBody != null ? rawBody : ''
+  const summary = body.trim().split('\n')[0]
+
+  const repo = url.split('/')[4]
 
   return {
     id: number,
-    url: html_url,
+    url,
     repo,
     title,
     author: user.login,
     commentCount: comments,
-    createdAt: DateTime.fromISO(created_at),
-    updatedAt: DateTime.fromISO(updated_at),
+    createdAt: DateTime.fromISO(createdAt),
+    updatedAt: DateTime.fromISO(updatedAt),
     body,
-    summary: body.split('\n')[0]
+    summary,
+  }
+}
+
+const parsePullRequestExtras = (data: any): PullRequestExtras => {
+  const { changed_files: filesChanged, head, mergeable_state: state } = data
+  return {
+    filesChanged,
+    branch: head.ref,
+    isDraft: state === 'draft',
+  }
+}
+
+const getExtendedPullRequest = async (
+  pullRequest: PullRequest,
+): Promise<ExtendedPullRequest> => {
+  const { repo, id } = pullRequest
+  const res = await github.pulls.get({ owner: GITHUB_ORG, repo, number: id })
+  return {
+    ...parsePullRequest(res.data),
+    ...parsePullRequestExtras(res.data),
   }
 }
 
 const getOpenPullRequests = async () => {
   const res = await github.search.issuesAndPullRequests({
-    q: `is:pr state:open user:${GITHUB_ORG}`
+    q: `is:pr state:open user:${GITHUB_ORG}`,
   })
 
   return res.data.items
     .map(parsePullRequest)
-    .sort((a : PullRequest, b : PullRequest) => {
+    .sort((a: PullRequest, b: PullRequest) => {
       return a.updatedAt.diff(b.updatedAt).valueOf()
     })
 }
 
-type Comment = {
-  author : string,
-  body : string
+interface Comment {
+  author: string,
+  body: string,
 }
 
-const parseComment = (data : any) : Comment => {
+const parseComment = (data: any): Comment => {
   const { user, body } = data
   return {
     author: user.login,
-    body
+    body,
   }
 }
 
-const getComments = async (pullRequest : PullRequest) => {
+const getComments = async (pullRequest: PullRequest) => {
   const res = await github.issues.listComments({
     owner: GITHUB_ORG,
     repo: pullRequest.repo,
-    number: pullRequest.id
+    number: pullRequest.id,
   })
 
   return res.data.map(parseComment)
 }
 
-type User = {
-  username : string
-  name : string
-  avatar : string
-  url : string
+interface User {
+  username: string,
+  name: string,
+  avatar: string,
+  url: string,
 }
 
-const parseUser = (data : any) : User => {
-  const { html_url, avatar_url, login, name } = data
+const parseUser = (data: any): User => {
+  const { html_url: url, avatar_url: avatar, login, name } = data
   return {
     username: login,
     name: name || login,
-    avatar: avatar_url,
-    url: html_url
+    avatar,
+    url,
   }
 }
 
-const forceGetUser = async (username : string) => {
+const forceGetUser = async (username: string) => {
   const res = await github.users.getByUsername({ username })
   return parseUser(res.data)
 }
@@ -169,19 +190,19 @@ const getUser = memoize(forceGetUser, { promise: true })
 const CH_COMMENT_REGEX = /\[ch(\d+)\]/
 const CH_BRANCH_REGEX = /ch(\d+)/
 
-const matchClubhouseLink = (text : string, regex : RegExp) => {
+const matchClubhouseLink = (text: string, regex: RegExp) => {
   const match = text.match(regex)
   if (match != null) {
     const storyId = match[1]
     return {
       storyId,
-      url: `${CLUBHOUSE_URL}${storyId}`
+      url: `${CLUBHOUSE_URL}${storyId}`,
     }
   }
   return null
 }
 
-const getClubhouseDetails = async (pullRequest : ExtendedPullRequest) => {
+const getClubhouseDetails = async (pullRequest: ExtendedPullRequest) => {
   const { body, branch } = pullRequest
 
   {
@@ -211,18 +232,27 @@ const getClubhouseDetails = async (pullRequest : ExtendedPullRequest) => {
   return null
 }
 
-const postToSlack = async (options : object) => {
+const postToSlack = async (options: object) => {
   await got(SLACK_WEBHOOK, { method: 'POST', body: JSON.stringify(options) })
 }
 
-type PostPullRequestToSlackOptions = {
-  pullRequest : ExtendedPullRequest
-  author : User
+interface PostPullRequestToSlackOptions {
+  pullRequest: ExtendedPullRequest,
+  author: User,
 }
 
-const postPullRequestToSlack = async (options : PostPullRequestToSlackOptions) => {
+const postPullRequestToSlack = async (
+  options: PostPullRequestToSlackOptions,
+) => {
   const { pullRequest, author } = options
-  const { repo, title, url, summary, updatedAt, commentCount, filesChanged } = pullRequest
+  const {
+    title,
+    url,
+    summary,
+    updatedAt,
+    commentCount,
+    filesChanged,
+  } = pullRequest
 
   const clubhouse = await getClubhouseDetails(pullRequest)
 
@@ -254,28 +284,29 @@ const postPullRequestToSlack = async (options : PostPullRequestToSlackOptions) =
     messages.push(`<${clubhouse.url}|Clubhouse card #${clubhouse.storyId}>`)
   }
 
-  const text = [
-    ...warnings,
-    summary,
-    ...messages
-  ]
+  const text = [...warnings, summary, ...messages]
     .filter((line) => line.trim().length > 0)
     .join('\n')
 
   await postToSlack({
     channel: SLACK_CHANNEL,
-    attachments: [{
-      ts: updatedAt.toSeconds(),
-      fallback: title,
-      color,
-      author_name: author.name,
-      author_link: author.url,
-      author_icon: author.avatar,
-      title: title,
-      title_link: url,
-      text,
-      footer: `${commentCount} ${pluralize('comment', commentCount)}. ${filesChanged} ${pluralize('file', filesChanged)} changed.`
-    }]
+    attachments: [
+      {
+        ts: updatedAt.toSeconds(),
+        fallback: title,
+        color,
+        author_name: author.name,
+        author_link: author.url,
+        author_icon: author.avatar,
+        title: title,
+        title_link: url,
+        text,
+        footer: `${commentCount} ${pluralize(
+          'comment',
+          commentCount,
+        )}. ${filesChanged} ${pluralize('file', filesChanged)} changed.`,
+      },
+    ],
   })
 }
 
