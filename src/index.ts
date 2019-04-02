@@ -246,7 +246,9 @@ const postPullRequestToSlack = async (
 ) => {
   const { pullRequest, author } = options
   const {
-    title,
+    id,
+    title: prTitle,
+    repo,
     url,
     summary,
     updatedAt,
@@ -278,11 +280,13 @@ const postPullRequestToSlack = async (
   }
 
   if (clubhouse == null) {
-    warnings.push('_Please link to a clubhouse card!_')
+    warnings.push('_Please link to a Clubhouse card!_')
     color = COLOR_INVALID
   } else {
-    messages.push(`<${clubhouse.url}|Clubhouse card #${clubhouse.storyId}>`)
+    messages.push(`<${clubhouse.url}|Clubhouse #${clubhouse.storyId}>`)
   }
+
+  const title = `[${repo}] #${id} ${prTitle}`
 
   const text = [...warnings, summary, ...messages]
     .filter((line) => line.trim().length > 0)
